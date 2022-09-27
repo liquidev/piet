@@ -18,10 +18,10 @@ pub use cairo;
 
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
 
-pub struct CairoRenderContext<'a> {
+pub struct CairoRenderContext {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
-    ctx: &'a Context,
+    ctx: Context,
     text: CairoText,
     // because of the relationship between GTK and cairo (where GTK applies a transform
     // to adjust for menus and window borders) we cannot trust the transform returned
@@ -31,7 +31,7 @@ pub struct CairoRenderContext<'a> {
     error: Result<(), cairo::Error>,
 }
 
-impl<'a> CairoRenderContext<'a> {}
+impl CairoRenderContext {}
 
 #[derive(Clone)]
 pub enum Brush {
@@ -60,7 +60,7 @@ macro_rules! set_gradient_stops {
     };
 }
 
-impl<'a> RenderContext for CairoRenderContext<'a> {
+impl RenderContext for CairoRenderContext {
     type Brush = Brush;
 
     type Text = CairoText;
@@ -174,7 +174,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.into();
         let offset = layout.pango_offset();
         self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
-        pangocairo::show_layout(self.ctx, layout.pango_layout());
+        pangocairo::show_layout(&mut self.ctx, layout.pango_layout());
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -386,7 +386,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 }
 
-impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
+impl IntoBrush<CairoRenderContext> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut CairoRenderContext,
@@ -402,7 +402,7 @@ impl Image for CairoImage {
     }
 }
 
-impl<'a> CairoRenderContext<'a> {
+impl CairoRenderContext {
     /// Create a new Cairo back-end.
     ///
     /// At the moment, it uses the "toy text API" for text layout, but when
@@ -410,7 +410,7 @@ impl<'a> CairoRenderContext<'a> {
     /// need a factory for that as an additional argument.
     pub fn new(ctx: &Context) -> CairoRenderContext {
         CairoRenderContext {
-            ctx,
+            ctx: ctx.clone(),
             text: CairoText::new(),
             transform_stack: Vec::new(),
             error: Ok(()),
